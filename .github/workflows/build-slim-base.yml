@@ -1,0 +1,45 @@
+name: Build Slim Base Image
+
+on:
+  push:
+    paths:
+      - 'requirements-slim.txt'
+      - 'Dockerfile-server-slim-base'
+  workflow_dispatch:
+
+env:
+  ALIYUN_REPO: ${{ secrets.ALIYUN_REGISTRY }}/xuruiray/lora
+
+jobs:
+  build-base:
+    name: Build slim base image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clean up Docker resources
+        run: |
+          docker system prune -af
+          docker builder prune -af
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Aliyun Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ALIYUN_REGISTRY }}
+          username: ${{ secrets.ALIYUN_USERNAME }}
+          password: ${{ secrets.ALIYUN_PASSWORD }}
+
+      - name: Build and push slim base
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile-server-slim-base
+          push: true
+          tags: ${{ env.ALIYUN_REPO }}:server-slim-base
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

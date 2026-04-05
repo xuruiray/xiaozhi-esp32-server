@@ -1,0 +1,22 @@
+FROM python:3.10-slim
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libopus0 ffmpeg locales && \
+    sed -i '/zh_CN.UTF-8/s/^# //g' /etc/locale.gen && \
+    locale-gen && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV LANG=zh_CN.UTF-8 \
+    LC_ALL=zh_CN.UTF-8 \
+    LANGUAGE=zh_CN:zh \
+    PYTHONIOENCODING=utf-8
+
+WORKDIR /opt/xiaozhi-esp32-server
+
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir torch==2.6.0+cpu torchaudio==2.6.0+cpu \
+    --index-url https://download.pytorch.org/whl/cpu
+
+COPY requirements-slim.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt --default-timeout=120 --retries 5
