@@ -61,8 +61,9 @@ class LLMProvider(LLMProviderBase):
             logger.bind(tag=TAG).error(model_key_msg)
 
         default_headers = {}
-        if self.base_url and "api.kimi.com" in self.base_url:
-            default_headers["User-Agent"] = "claude-code/1.0"
+        kimi_domains = ("api.moonshot.ai", "api.moonshot.cn", "api.kimi.com")
+        if self.base_url and any(d in self.base_url for d in kimi_domains):
+            default_headers["User-Agent"] = "xiaozhi-server/1.0"
 
         self.client = openai.OpenAI(
             api_key=self.api_key,
