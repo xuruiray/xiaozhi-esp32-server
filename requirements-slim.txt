@@ -1,10 +1,11 @@
 # -*- coding:utf-8 -*-
-# Slim requirements: cloud ASR/TTS/LLM only, no local models except SileroVAD
-# torch installed separately in Dockerfile for CPU-only build
+# Slim requirements: cloud ASR/TTS/LLM only, no torch
+# SileroVAD runs via ONNX Runtime (model file downloaded in Dockerfile)
+onnxruntime>=1.16.1
 numpy==1.26.4
 websockets==14.2
 pyyml==0.0.2
-silero_vad==6.1.0
+# silero_vad removed: using ONNX model directly without torch dependency
 opuslib_next==1.1.5
 pydub==0.25.1
 openai==2.8.1

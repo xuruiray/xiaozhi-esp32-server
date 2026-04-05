@@ -3,4 +3,8 @@ FROM crpi-bag6znt2buomet4p.cn-beijing.personal.cr.aliyuncs.com/xuruiray/lora:ser
 COPY main/xiaozhi-server .
 RUN rm -rf models/SenseVoiceSmall/model.pt models/SenseVoiceSmall/example
 
+RUN mkdir -p models/snakers4_silero-vad/src/silero_vad/data && \
+    curl -sL -o models/snakers4_silero-vad/src/silero_vad/data/silero_vad.onnx \
+    https://github.com/snakers4/silero-vad/raw/master/src/silero_vad/data/silero_vad.onnx
+
 CMD ["python", "app.py"]
