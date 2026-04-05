@@ -59,7 +59,17 @@ class LLMProvider(LLMProviderBase):
         model_key_msg = check_model_key("LLM", self.api_key)
         if model_key_msg:
             logger.bind(tag=TAG).error(model_key_msg)
-        self.client = openai.OpenAI(api_key=self.api_key, base_url=self.base_url, timeout=custom_timeout)
+
+        default_headers = {}
+        if self.base_url and "api.kimi.com" in self.base_url:
+            default_headers["User-Agent"] = "claude-code/1.0"
+
+        self.client = openai.OpenAI(
+            api_key=self.api_key,
+            base_url=self.base_url,
+            timeout=custom_timeout,
+            default_headers=default_headers if default_headers else openai.NOT_GIVEN,
+        )
 
     @staticmethod
     def normalize_dialogue(dialogue):
