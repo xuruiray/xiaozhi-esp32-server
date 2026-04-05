@@ -5,10 +5,6 @@ on:
     tags:
       - 'v*.*.*'
   workflow_dispatch:
-  workflow_run:
-    workflows: ["Build Base Image"]
-    types:
-      - completed
 
 env:
   ALIYUN_REPO: ${{ secrets.ALIYUN_REGISTRY }}/xuruiray/lora
@@ -17,17 +13,7 @@ jobs:
   release:
     name: Release Docker images
     runs-on: ubuntu-latest
-    permissions:
-      packages: write
-      contents: write
-      id-token: write
-      issues: write
     steps:
-      - name: Check Disk Space
-        run: |
-          df -h
-          docker system df
-
       - name: Clean up Docker resources
         run: |
           docker system prune -af
@@ -41,13 +27,6 @@ jobs:
         with:
           driver-opts: |
             network=host
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.TOKEN }}
 
       - name: Login to Aliyun Container Registry
         uses: docker/login-action@v3
@@ -75,15 +54,11 @@ jobs:
           file: Dockerfile-server
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:server_latest
             ${{ env.ALIYUN_REPO }}:server_latest
-            ${{ env.IS_VERSION == 'true' && format('ghcr.io/{0}:server_{1}', github.repository, env.VERSION) || '' }}
             ${{ env.IS_VERSION == 'true' && format('{0}:server_{1}', env.ALIYUN_REPO, env.VERSION) || '' }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            BUILDKIT_PROGRESS=plain
 
       - name: Build and push manager-web
         uses: docker/build-push-action@v6
@@ -92,12 +67,8 @@ jobs:
           file: Dockerfile-web
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:web_latest
             ${{ env.ALIYUN_REPO }}:web_latest
-            ${{ env.IS_VERSION == 'true' && format('ghcr.io/{0}:web_{1}', github.repository, env.VERSION) || '' }}
             ${{ env.IS_VERSION == 'true' && format('{0}:web_{1}', env.ALIYUN_REPO, env.VERSION) || '' }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            BUILDKIT_PROGRESS=plain
