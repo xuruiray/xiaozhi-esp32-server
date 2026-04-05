@@ -15,7 +15,7 @@ ENV LANG=zh_CN.UTF-8 \
 WORKDIR /opt/xiaozhi-esp32-server
 
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir torch==2.2.2+cpu torchaudio==2.2.2+cpu \
+    pip install --no-cache-dir torch==2.6.0+cpu torchaudio==2.6.0+cpu \
     --index-url https://download.pytorch.org/whl/cpu
 
 COPY requirements-slim.txt requirements.txt
