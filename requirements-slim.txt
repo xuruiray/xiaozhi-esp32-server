@@ -1,10 +1,6 @@
 # -*- coding:utf-8 -*-
 # Slim requirements: cloud ASR/TTS/LLM only, no local models except SileroVAD
-# torch CPU-only for silero_vad (~200MB vs ~2GB full)
---index-url https://download.pytorch.org/whl/cpu
-torch==2.2.2+cpu
-torchaudio==2.2.2+cpu
---index-url https://mirrors.aliyun.com/pypi/simple/
+# torch installed separately in Dockerfile for CPU-only build
 numpy==1.26.4
 websockets==14.2
 pyyml==0.0.2

@@ -14,13 +14,14 @@ ENV LANG=zh_CN.UTF-8 \
 
 WORKDIR /opt/xiaozhi-esp32-server
 
-COPY requirements-slim.txt requirements.txt
-
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt --default-timeout=120 --retries 5
+    pip install --no-cache-dir torch==2.2.2+cpu torchaudio==2.2.2+cpu \
+    --index-url https://download.pytorch.org/whl/cpu
+
+COPY requirements-slim.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt --default-timeout=120 --retries 5
 
 COPY main/xiaozhi-server .
-
 RUN rm -rf models/SenseVoiceSmall/model.pt models/SenseVoiceSmall/example
 
 CMD ["python", "app.py"]
