@@ -3,6 +3,7 @@ from aiohttp import web
 from config.logger import setup_logging
 from core.api.ota_handler import OTAHandler
 from core.api.vision_handler import VisionHandler
+from core.api.admin_handler import AdminHandler
 
 TAG = __name__
 
@@ -13,6 +14,7 @@ class SimpleHttpServer:
         self.logger = setup_logging()
         self.ota_handler = OTAHandler(config)
         self.vision_handler = VisionHandler(config)
+        self.admin_handler = AdminHandler(config)
 
     def _get_websocket_url(self, local_ip: str, port: int) -> str:
         """获取websocket地址
@@ -74,6 +76,15 @@ class SimpleHttpServer:
                         ),
                     ]
                 )
+
+                if not read_config_from_api:
+                    app.add_routes(
+                        [
+                            web.get("/admin", self.admin_handler.handle_page),
+                            web.get("/admin/config", self.admin_handler.handle_get_config),
+                            web.post("/admin/save", self.admin_handler.handle_save),
+                        ]
+                    )
 
                 # 运行服务
                 runner = web.AppRunner(app)

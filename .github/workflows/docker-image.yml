@@ -60,15 +60,4 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push manager-web
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile-web
-          push: true
-          tags: |
-            ${{ env.ALIYUN_REPO }}:web_latest
-            ${{ env.IS_VERSION == 'true' && format('{0}:web_{1}', env.ALIYUN_REPO, env.VERSION) || '' }}
-          platforms: linux/amd64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+
