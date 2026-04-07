@@ -799,6 +799,133 @@ class ConnectionHandler:
         # 更新系统prompt至上下文
         self.dialogue.update_system_message(self.prompt)
 
+    # ── Session lifecycle (OpenClaw-inspired) ──
+
+    def start_new_session(self):
+        non_system = [m for m in self.dialogue.dialogue if m.role != "system"]
+        user_turns = sum(1 for m in non_system if m.role == "user")
+
+        if user_turns > 2 and self.memory and self.llm:
+            old_messages = list(non_system)
+            threading.Thread(
+                target=self._flush_session_background,
+                args=(old_messages,),
+                daemon=True,
+            ).start()
+
+        self.dialogue.trim_history(0)
+        self.logger.bind(tag=TAG).info("New session started, dialogue cleared")
+
+    def _flush_session_background(self, messages):
+        try:
+            msg_text = ""
+            for m in messages:
+                content = m.content or ""
+                try:
+                    if content.strip().startswith("{") and content.strip().endswith("}"):
+                        data = json.loads(content)
+                        if "content" in data:
+                            content = data["content"]
+                except (json.JSONDecodeError, KeyError, TypeError):
+                    pass
+                if m.role == "user":
+                    msg_text += f"User: {content}\n"
+                elif m.role == "assistant" and content:
+                    msg_text += f"Assistant: {content}\n"
+
+            if not msg_text.strip():
+                return
+
+            summary = self.llm.response_no_stream(
+                "你是记忆总结助手。用两三句话总结以下对话的要点，保留人名、关键事实和用户偏好。只输出总结，不要解释。",
+                msg_text,
+                max_tokens=200,
+                temperature=0.2,
+            )
+            if summary and summary.strip():
+                if self.memory.short_memory:
+                    self.memory.short_memory += f"\n---\n{summary.strip()}"
+                else:
+                    self.memory.short_memory = summary.strip()
+
+                mem_config = self.config.get("memory_management", {})
+                max_chars = int(mem_config.get("long_term_max_chars", 800))
+                if len(self.memory.short_memory) > max_chars:
+                    self._compact_memory(mem_config)
+
+                if hasattr(self.memory, "save_memory_to_file"):
+                    self.memory.save_memory_to_file()
+                self.logger.bind(tag=TAG).info(f"Session flushed, memory updated ({len(self.memory.short_memory)} chars)")
+        except Exception as e:
+            self.logger.bind(tag=TAG).error(f"Session flush failed: {e}")
+
+    def _compact_memory(self, mem_config=None):
+        if not mem_config:
+            mem_config = self.config.get("memory_management", {})
+        target = int(mem_config.get("compact_target_chars", 500))
+        try:
+            compacted = self.llm.response_no_stream(
+                f"你是记忆压缩助手。以下是用户的累积记忆，请精炼保留最重要的信息（人名、偏好、关键事实），控制在{target}字以内。只输出精炼后的记忆，不要解释。",
+                self.memory.short_memory,
+                max_tokens=600,
+                temperature=0.2,
+            )
+            if compacted and compacted.strip():
+                self.memory.short_memory = compacted.strip()
+                self.logger.bind(tag=TAG).info(f"Memory compacted to {len(self.memory.short_memory)} chars")
+        except Exception as e:
+            self.logger.bind(tag=TAG).error(f"Memory compaction failed: {e}")
+
+    def _rolling_summarize(self):
+        mem_config = self.config.get("memory_management", {})
+        keep = int(mem_config.get("keep_turns", 3))
+
+        non_system = [m for m in self.dialogue.dialogue if m.role != "system"]
+        user_indices = [i for i, m in enumerate(non_system) if m.role == "user"]
+        if len(user_indices) <= keep:
+            return
+
+        cut_idx = user_indices[-keep]
+        old_messages = non_system[:cut_idx]
+
+        msg_text = ""
+        for m in old_messages:
+            content = m.content or ""
+            try:
+                if content.strip().startswith("{") and content.strip().endswith("}"):
+                    data = json.loads(content)
+                    if "content" in data:
+                        content = data["content"]
+            except (json.JSONDecodeError, KeyError, TypeError):
+                pass
+            if m.role == "user":
+                msg_text += f"User: {content}\n"
+            elif m.role == "assistant" and content:
+                msg_text += f"Assistant: {content}\n"
+
+        if msg_text.strip() and self.memory and self.llm:
+            try:
+                summary = self.llm.response_no_stream(
+                    "你是记忆总结助手。用一两句话总结以下对话要点，保留关键信息。只输出总结。",
+                    msg_text,
+                    max_tokens=150,
+                    temperature=0.2,
+                )
+                if summary and summary.strip():
+                    if self.memory.short_memory:
+                        self.memory.short_memory += f"\n---\n{summary.strip()}"
+                    else:
+                        self.memory.short_memory = summary.strip()
+                    if hasattr(self.memory, "save_memory_to_file"):
+                        self.memory.save_memory_to_file()
+            except Exception as e:
+                self.logger.bind(tag=TAG).error(f"Rolling summarize failed: {e}")
+
+        self.dialogue.trim_history(keep)
+        self.logger.bind(tag=TAG).info(f"Rolling trim: kept {keep} turns")
+
+    # ── End session lifecycle ──
+
     def chat(self, query, depth=0):
         if query is not None:
             self.logger.bind(tag=TAG).info(f"大模型收到用户消息: {query}")
@@ -807,6 +934,13 @@ class ConnectionHandler:
         if depth == 0:
             self.sentence_id = str(uuid.uuid4().hex)
             self.dialogue.put(Message(role="user", content=query))
+
+            mem_config = self.config.get("memory_management", {})
+            max_turns = int(mem_config.get("max_turns", 6))
+            non_system = [m for m in self.dialogue.dialogue if m.role != "system"]
+            user_turns = sum(1 for m in non_system if m.role == "user")
+            if user_turns > max_turns and self.memory and self.llm:
+                self._rolling_summarize()
             self.tts.tts_text_queue.put(
                 TTSMessageDTO(
                     sentence_id=self.sentence_id,

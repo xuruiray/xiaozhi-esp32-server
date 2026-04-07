@@ -47,6 +47,7 @@ class ListenTextMessageHandler(TextMessageHandler):
         elif msg_json["state"] == "detect":
             conn.client_have_voice = False
             conn.reset_audio_states()
+            conn.start_new_session()
             if "text" in msg_json:
                 conn.last_activity_time = time.time() * 1000
                 original_text = msg_json["text"]  # 保留原始文本

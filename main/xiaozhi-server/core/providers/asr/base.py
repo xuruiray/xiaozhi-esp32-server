@@ -94,6 +94,20 @@ class ASRProviderBase(ABC):
 
             combined_pcm_data = b"".join(pcm_data)
 
+            # 声纹注册拦截：如果有待注册的声纹请求，用本段音频注册而不走正常ASR
+            reg_info = getattr(conn, "voiceprint_register_pending", None)
+            if reg_info and combined_pcm_data:
+                conn.voiceprint_register_pending = None
+                wav_data = self._pcm_to_wav(combined_pcm_data)
+                from plugins_func.functions.register_voiceprint import do_voiceprint_register
+                success, msg = await do_voiceprint_register(conn, wav_data, reg_info)
+                from core.providers.tts.dto.dto import TTSMessageDTO, SentenceType, ContentType
+                sid = uuid.uuid4().hex
+                conn.tts.tts_text_queue.put(TTSMessageDTO(sentence_id=sid, sentence_type=SentenceType.FIRST, content_type=ContentType.ACTION))
+                conn.tts.tts_text_queue.put(TTSMessageDTO(sentence_id=sid, sentence_type=SentenceType.MIDDLE, content_type=ContentType.TEXT, content_detail=msg))
+                conn.tts.tts_text_queue.put(TTSMessageDTO(sentence_id=sid, sentence_type=SentenceType.LAST, content_type=ContentType.ACTION))
+                return
+
             # 预先准备WAV数据
             wav_data = None
             if conn.voiceprint_provider and combined_pcm_data:
