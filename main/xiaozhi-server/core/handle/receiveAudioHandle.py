@@ -94,6 +94,12 @@ async def startToChat(conn: "ConnectionHandler", text):
 
     # 意图未被处理，继续常规聊天流程，使用实际文本内容
     await send_stt_message(conn, actual_text)
+    await conn.websocket.send(json.dumps({
+        "type": "llm",
+        "text": "🤔",
+        "emotion": "thinking",
+        "session_id": conn.session_id,
+    }))
     conn.executor.submit(conn.chat, actual_text)
 
 
