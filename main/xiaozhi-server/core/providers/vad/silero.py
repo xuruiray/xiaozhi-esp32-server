@@ -35,7 +35,7 @@ class VADProvider(VADProviderBase):
             int(min_silence_duration_ms) if min_silence_duration_ms else 1000
         )
 
-        self.frame_window_threshold = 3
+        self.frame_window_threshold = int(config.get("frame_window_threshold", 4))
 
     def _init_connection_state(self, conn):
         """为连接初始化独立的 VAD 状态"""
