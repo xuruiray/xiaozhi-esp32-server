@@ -106,8 +106,9 @@ def get_stock(conn: "ConnectionHandler", symbol: str = None, action: str = "quot
     direction = "涨" if change >= 0 else "跌"
 
     report = (
-        f"{name}（{resolved}）当前价格 ${price:.2f}，"
-        f"今日{direction} {abs(change):.2f}（{abs(change_pct):.2f}%），"
-        f"最高 ${high:.2f}，最低 ${low:.2f}，昨收 ${prev_close:.2f}"
+        f"{name}（{resolved}）当前价格{price:.2f}美元，"
+        f"今日{direction}{abs(change):.2f}美元，幅度{abs(change_pct):.2f}%，"
+        f"最高{high:.2f}，最低{low:.2f}，昨收{prev_close:.2f}。"
+        f"请用口语化的方式播报，不要使用任何符号标记。"
     )
     return ActionResponse(Action.REQLLM, report, None)
