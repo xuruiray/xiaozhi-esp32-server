@@ -1,7 +1,10 @@
 .git
-__pycache__
-*.pyc
-.env
-Dockerfile
-tmp/
-data/
+.github
+.gitignore
+.dockerignore
+.claude
+LICENSE
+README.md
+Dockerfile*
+requirements-slim.txt
+*.md

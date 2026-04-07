@@ -1,7 +1,11 @@
 FROM crpi-bag6znt2buomet4p.cn-beijing.personal.cr.aliyuncs.com/xuruiray/lora:server-slim-base
 
-COPY main/xiaozhi-server .
-RUN rm -rf models/SenseVoiceSmall/model.pt models/SenseVoiceSmall/example
+COPY app.py config.yaml agent-base-prompt.txt mcp_server_settings.json ./
+COPY config/ config/
+COPY core/ core/
+COPY models/ models/
+COPY plugins_func/ plugins_func/
+COPY test/ test/
 
 RUN mkdir -p models/snakers4_silero-vad/src/silero_vad/data && \
     curl -sL -o models/snakers4_silero-vad/src/silero_vad/data/silero_vad.onnx \
