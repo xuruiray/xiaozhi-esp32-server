@@ -1069,6 +1069,9 @@ class ConnectionHandler:
                         f"Skipping duplicate TTS for tool {tool_call_data['name']}, already streamed"
                     )
                 else:
+                    asyncio.run_coroutine_threadsafe(
+                        textUtils.get_emotion(self, text), self.loop
+                    )
                     self.tts.tts_one_sentence(self, ContentType.TEXT, content_detail=text)
                 self.dialogue.put(Message(role="assistant", content=text))
             elif result.action == Action.REQLLM:
