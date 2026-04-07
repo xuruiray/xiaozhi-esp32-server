@@ -1235,7 +1235,8 @@ class ConnectionHandler:
                 }
                 for idx, (_, tool_call_data) in enumerate(need_llm_tools)
             ]
-            self.dialogue.put(Message(role="assistant", tool_calls=all_tool_calls))
+            rc = getattr(self.llm, "last_reasoning_content", None)
+            self.dialogue.put(Message(role="assistant", tool_calls=all_tool_calls, reasoning_content=rc))
 
             for result, tool_call_data in need_llm_tools:
                 text = result.result

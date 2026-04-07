@@ -13,13 +13,15 @@ class Message:
             tool_calls=None,
             tool_call_id=None,
             is_temporary=False,
+            reasoning_content: str = None,
     ):
         self.uniq_id = uniq_id if uniq_id is not None else str(uuid.uuid4())
         self.role = role
         self.content = content
         self.tool_calls = tool_calls
         self.tool_call_id = tool_call_id
-        self.is_temporary = is_temporary  # 标记临时消息（如工具调用提醒）
+        self.is_temporary = is_temporary
+        self.reasoning_content = reasoning_content
 
 
 class Dialogue:
@@ -33,7 +35,10 @@ class Dialogue:
 
     def getMessages(self, m, dialogue):
         if m.tool_calls is not None:
-            dialogue.append({"role": m.role, "content": m.content or "", "tool_calls": m.tool_calls})
+            msg = {"role": m.role, "content": m.content or "", "tool_calls": m.tool_calls}
+            if m.reasoning_content:
+                msg["reasoning_content"] = m.reasoning_content
+            dialogue.append(msg)
         elif m.role == "tool":
             dialogue.append(
                 {

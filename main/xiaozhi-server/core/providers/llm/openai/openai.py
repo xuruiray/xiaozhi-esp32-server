@@ -20,7 +20,6 @@ class LLMProvider(LLMProviderBase):
         
         timeout_config = config.get("timeout")
         if isinstance(timeout_config, dict):
-            # 细粒度超时配置
             custom_timeout = httpx.Timeout(
                 pool=timeout_config.get("pool", 2.0),
                 connect=timeout_config.get("connect", 3.0),
@@ -28,10 +27,8 @@ class LLMProvider(LLMProviderBase):
                 read=timeout_config.get("read", 60.0)
             )
         elif isinstance(timeout_config, (int, float)) and timeout_config > 0:
-            # 兼容旧的单一超时配置（整数或浮点数）
             custom_timeout = httpx.Timeout(timeout_config)
         else:
-            # 未配置或配置无效，使用默认值
             custom_timeout = httpx.Timeout(300)
 
         param_defaults = {
@@ -61,9 +58,11 @@ class LLMProvider(LLMProviderBase):
             logger.bind(tag=TAG).error(model_key_msg)
 
         default_headers = {}
+        self._is_kimi = False
         kimi_domains = ("api.moonshot.ai", "api.moonshot.cn", "api.kimi.com")
         if self.base_url and any(d in self.base_url for d in kimi_domains):
             default_headers["User-Agent"] = "claude-code/1.0"
+            self._is_kimi = True
 
         self.client = openai.OpenAI(
             api_key=self.api_key,
@@ -72,9 +71,10 @@ class LLMProvider(LLMProviderBase):
             default_headers=default_headers if default_headers else openai.NOT_GIVEN,
         )
 
+        self.last_reasoning_content = None
+
     @staticmethod
     def normalize_dialogue(dialogue):
-        """自动修复 dialogue 中缺失 content 的消息"""
         for msg in dialogue:
             if "role" in msg and "content" not in msg:
                 msg["content"] = ""
@@ -89,7 +89,6 @@ class LLMProvider(LLMProviderBase):
             "stream": True,
         }
 
-        # 添加可选参数,只有当参数不为None时才添加
         optional_params = {
             "max_tokens": kwargs.get("max_tokens", self.max_tokens),
             "temperature": kwargs.get("temperature", self.temperature),
@@ -143,11 +142,17 @@ class LLMProvider(LLMProviderBase):
 
         stream = self.client.chat.completions.create(**request_params)
 
+        self.last_reasoning_content = None
+        reasoning_parts = []
+
         for chunk in stream:
             if getattr(chunk, "choices", None):
                 delta = chunk.choices[0].delta
                 content = getattr(delta, "content", "")
                 tool_calls = getattr(delta, "tool_calls", None)
+                rc = getattr(delta, "reasoning_content", None)
+                if rc:
+                    reasoning_parts.append(rc)
                 yield content, tool_calls
             elif isinstance(getattr(chunk, "usage", None), CompletionUsage):
                 usage_info = getattr(chunk, "usage", None)
@@ -156,3 +161,6 @@ class LLMProvider(LLMProviderBase):
                     f"输出 {getattr(usage_info, 'completion_tokens', '未知')}，"
                     f"共计 {getattr(usage_info, 'total_tokens', '未知')}"
                 )
+
+        if reasoning_parts:
+            self.last_reasoning_content = "".join(reasoning_parts)
