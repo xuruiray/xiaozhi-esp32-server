@@ -174,7 +174,7 @@ class PromptManager:
             from plugins_func.register import ActionResponse
 
             # 调用get_weather函数
-            result = get_weather(conn, location=location, lang="zh_CN")
+            result = get_weather(conn, location=location, lang="zh")
             if isinstance(result, ActionResponse):
                 weather_report = result.result
                 self.cache_manager.set(self.CacheType.WEATHER, location, weather_report)
