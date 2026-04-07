@@ -33,7 +33,7 @@ class Dialogue:
 
     def getMessages(self, m, dialogue):
         if m.tool_calls is not None:
-            dialogue.append({"role": m.role, "tool_calls": m.tool_calls})
+            dialogue.append({"role": m.role, "content": m.content or "", "tool_calls": m.tool_calls})
         elif m.role == "tool":
             dialogue.append(
                 {
