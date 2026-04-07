@@ -67,29 +67,21 @@ def set_expression(conn: "ConnectionHandler", emotion: str = "happy"):
     emoji = EXPRESSION_MAP[emotion]
 
     try:
-        asyncio.run_coroutine_threadsafe(
-            conn.websocket.send(
-                json.dumps(
-                    {
-                        "type": "llm",
-                        "text": emoji,
-                        "emotion": emotion,
-                        "session_id": conn.session_id,
-                    }
-                )
-            ),
-            conn.loop,
-        ).result(timeout=5)
-        logger.bind(tag=TAG).info(f"Set expression: {emotion} {emoji}")
-        return ActionResponse(
-            action=Action.RESPONSE,
-            result=f"已切换表情为{emotion}",
-            response=f"好的，已经换成{emotion}表情啦",
+        message = json.dumps(
+            {
+                "type": "llm",
+                "text": emoji,
+                "emotion": emotion,
+                "session_id": conn.session_id,
+            }
         )
+        asyncio.run_coroutine_threadsafe(conn.websocket.send(message), conn.loop)
+        logger.bind(tag=TAG).info(f"Set expression: {emotion} {emoji}")
     except Exception as e:
         logger.bind(tag=TAG).error(f"Set expression failed: {e}")
-        return ActionResponse(
-            action=Action.RESPONSE,
-            result="表情切换失败",
-            response="哎呀，表情切换失败了",
-        )
+
+    return ActionResponse(
+        action=Action.RESPONSE,
+        result=f"已切换表情为{emotion}",
+        response=f"好的，已经换成{emotion}表情啦",
+    )
